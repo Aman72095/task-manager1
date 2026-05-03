@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Task Manager</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+    }
+
+    .container {
+      width: 420px;
+      margin: 50px auto;
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .role {
+      text-align: center;
+      font-size: 13px;
+      color: gray;
+      margin-bottom: 15px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .create { background: #28a745; }
+    .load { background: #17a2b8; }
+    .logout { background: #dc3545; }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 15px;
+    }
+
+    li {
+      background: #f8f9fa;
+      padding: 10px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .done {
+      margin-top: 5px;
+      background: #28a745;
+      border: none;
+      padding: 5px 8px;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .completed {
+      text-decoration: line-through;
+      color: gray;
+    }
+
+    #stats {
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h2>🚀 Task Dashboard</h2>
+
+  <div class="role" id="roleText"></div>
+
+  <input id="title" placeholder="Task title" />
+  <input id="assign" placeholder="Assign user email" />
+  <input id="project" placeholder="Project name" />
+
+  <button class="btn create" onclick="createTask()">Create Task</button>
+  <button class="btn load" onclick="loadTasks()">Load Tasks</button>
+  <button class="btn logout" onclick="logout()">Logout</button>
+
+  <p id="stats"></p>
+
+  <ul id="taskList"></ul>
+
+</div>
+
+<script>
+
+const API = "http://localhost:5000";
+const token = localStorage.getItem("token");
+
+// 🔐 Check login
+if(!token){
+  alert("Login required");
+  window.location.href = "index.html";
+}
+
+// 🔓 Decode JWT to show role
+function parseJWT(token){
+  try{
+    return JSON.parse(atob(token.split('.')[1]));
+  }catch{
+    return null;
+  }
+}
+
+const decoded = parseJWT(token.split(" ")[1]);
+document.getElementById("roleText").innerText =
+  "Logged in as: " + (decoded?.role || "User");
+
+// CREATE TASK
+async function createTask(){
+  const title = document.getElementById("title").value;
+  const assignEmail = document.getElementById("assign").value;
+  const project = document.getElementById("project").value;
+
+  if(!title) return alert("Enter task");
+
+  await fetch(API + "/api/tasks",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization": token
+    },
+    body: JSON.stringify({
+      title,
+      assignEmail,
+      project,
+      deadline: new Date()
+    })
+  });
+
+  document.getElementById("title").value = "";
+  document.getElementById("assign").value = "";
+  document.getElementById("project").value = "";
+
+  loadTasks();
+}
+
+// LOAD TASKS
+async function loadTasks(){
+  const res = await fetch(API + "/api/tasks",{
+    headers:{ "Authorization": token }
+  });
+
+  const tasks = await res.json();
+
+  const list = document.getElementById("taskList");
+  list.innerHTML = "";
+
+  let pending = 0;
+  let done = 0;
+
+  tasks.forEach(t=>{
+    if(t.status === "Completed") done++;
+    else pending++;
+
+    const li = document.createElement("li");
+
+    li.innerHTML = `
+      <div class="${t.status === 'Completed' ? 'completed' : ''}">
+        <b>${t.title}</b><br>
+        📁 Project: ${t.project?.name || "N/A"}<br>
+        👤 Assigned: ${t.assignEmail || "N/A"}<br>
+        📌 Status: ${t.status}
+        ${t.status !== "Completed" ? " ⚠ Overdue" : ""}
+      </div>
+
+      ${t.status !== "Completed"
+        ? `<button class="done" onclick="markDone('${t._id}')">✔ Done</button>`
+        : ""
+      }
+    `;
+
+    list.appendChild(li);
+  });
+
+  document.getElementById("stats").innerText =
+    "📊 Pending: " + pending + " | Completed: " + done;
+}
+
+// UPDATE STATUS
+async function markDone(id){
+  await fetch(API + "/api/tasks/" + id,{
+    method:"PUT",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization": token
+    },
+    body: JSON.stringify({
+      status: "Completed"
+    })
+  });
+
+  loadTasks();
+}
+
+// LOGOUT
+function logout(){
+  localStorage.removeItem("token");
+  window.location.href = "index.html";
+}
+
+// AUTO LOAD
+loadTasks();
+
+</script>
+
+</body>
+</html>
