@@ -19,17 +19,7 @@
       box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     }
 
-    h2 {
-      text-align: center;
-      margin-bottom: 10px;
-    }
-
-    .role {
-      text-align: center;
-      font-size: 13px;
-      color: gray;
-      margin-bottom: 15px;
-    }
+    h2 { text-align: center; }
 
     input {
       width: 100%;
@@ -54,30 +44,11 @@
     .load { background: #17a2b8; }
     .logout { background: #dc3545; }
 
-    ul {
-      list-style: none;
-      padding: 0;
-      margin-top: 15px;
-    }
-
     li {
-      background: #f8f9fa;
+      background: #f1f1f1;
       padding: 10px;
-      margin-bottom: 8px;
+      margin-top: 8px;
       border-radius: 6px;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-    }
-
-    .done {
-      margin-top: 5px;
-      background: #28a745;
-      border: none;
-      padding: 5px 8px;
-      color: white;
-      border-radius: 5px;
-      cursor: pointer;
     }
 
     .completed {
@@ -85,10 +56,15 @@
       color: gray;
     }
 
+    .overdue {
+      color: red;
+      font-weight: bold;
+    }
+
     #stats {
       text-align: center;
       font-weight: bold;
-      margin-bottom: 10px;
+      margin: 10px 0;
     }
   </style>
 </head>
@@ -99,79 +75,58 @@
 
   <h2>🚀 Task Dashboard</h2>
 
-  <div class="role" id="roleText"></div>
-
   <input id="title" placeholder="Task title" />
-  <input id="assign" placeholder="Assign user email" />
-  <input id="project" placeholder="Project name" />
+  <input id="assignedTo" placeholder="Assign user email" />
+  <input id="deadline" type="date" />
 
   <button class="btn create" onclick="createTask()">Create Task</button>
   <button class="btn load" onclick="loadTasks()">Load Tasks</button>
   <button class="btn logout" onclick="logout()">Logout</button>
 
   <p id="stats"></p>
-
   <ul id="taskList"></ul>
 
 </div>
 
 <script>
 
-const API = "http://localhost:5000";
+const API = "https://task-manager1-production.up.railway.app";
 const token = localStorage.getItem("token");
 
-// 🔐 Check login
-if(!token){
-  alert("Login required");
+if (!token) {
+  alert("Login first");
   window.location.href = "index.html";
 }
 
-// 🔓 Decode JWT to show role
-function parseJWT(token){
-  try{
-    return JSON.parse(atob(token.split('.')[1]));
-  }catch{
-    return null;
-  }
-}
-
-const decoded = parseJWT(token.split(" ")[1]);
-document.getElementById("roleText").innerText =
-  "Logged in as: " + (decoded?.role || "User");
-
-// CREATE TASK
-async function createTask(){
+// ✅ CREATE TASK
+async function createTask() {
   const title = document.getElementById("title").value;
-  const assignEmail = document.getElementById("assign").value;
-  const project = document.getElementById("project").value;
+  const assignedTo = document.getElementById("assignedTo").value;
+  const deadline = document.getElementById("deadline").value;
 
-  if(!title) return alert("Enter task");
+  if (!title) return alert("Enter task");
 
-  await fetch(API + "/api/tasks",{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json",
+  await fetch(`${API}/api/tasks`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
       "Authorization": token
     },
     body: JSON.stringify({
       title,
-      assignEmail,
-      project,
-      deadline: new Date()
+      assignedTo,
+      deadline
     })
   });
 
-  document.getElementById("title").value = "";
-  document.getElementById("assign").value = "";
-  document.getElementById("project").value = "";
-
+  alert("Task Created");
   loadTasks();
 }
 
-// LOAD TASKS
-async function loadTasks(){
-  const res = await fetch(API + "/api/tasks",{
-    headers:{ "Authorization": token }
+// ✅ LOAD TASKS + DASHBOARD
+async function loadTasks() {
+  const res = await fetch(`${API}/api/tasks`, {
+    headers: { "Authorization": token }
   });
 
   const tasks = await res.json();
@@ -180,25 +135,35 @@ async function loadTasks(){
   list.innerHTML = "";
 
   let pending = 0;
-  let done = 0;
+  let completed = 0;
+  let overdue = 0;
 
-  tasks.forEach(t=>{
-    if(t.status === "Completed") done++;
+  const today = new Date();
+
+  tasks.forEach(t => {
+
+    const isCompleted = t.status === "Completed";
+    const isOverdue = t.deadline && new Date(t.deadline) < today && !isCompleted;
+
+    if (isCompleted) completed++;
     else pending++;
+
+    if (isOverdue) overdue++;
 
     const li = document.createElement("li");
 
     li.innerHTML = `
-      <div class="${t.status === 'Completed' ? 'completed' : ''}">
+      <div class="${isCompleted ? 'completed' : ''}">
         <b>${t.title}</b><br>
-        📁 Project: ${t.project?.name || "N/A"}<br>
-        👤 Assigned: ${t.assignEmail || "N/A"}<br>
+        👤 Assigned: ${t.assignedTo || "N/A"}<br>
+        📅 Deadline: ${t.deadline ? t.deadline.split("T")[0] : "N/A"}<br>
         📌 Status: ${t.status}
-        ${t.status !== "Completed" ? " ⚠ Overdue" : ""}
+        ${isOverdue ? "<div class='overdue'>⚠ Overdue</div>" : ""}
       </div>
 
-      ${t.status !== "Completed"
-        ? `<button class="done" onclick="markDone('${t._id}')">✔ Done</button>`
+      ${
+        !isCompleted
+        ? `<button onclick="markDone('${t._id}')">✔ Mark Done</button>`
         : ""
       }
     `;
@@ -207,15 +172,15 @@ async function loadTasks(){
   });
 
   document.getElementById("stats").innerText =
-    "📊 Pending: " + pending + " | Completed: " + done;
+    `📊 Pending: ${pending} | Completed: ${completed} | Overdue: ${overdue}`;
 }
 
-// UPDATE STATUS
-async function markDone(id){
-  await fetch(API + "/api/tasks/" + id,{
-    method:"PUT",
-    headers:{
-      "Content-Type":"application/json",
+// ✅ MARK COMPLETE
+async function markDone(id) {
+  await fetch(`${API}/api/tasks/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
       "Authorization": token
     },
     body: JSON.stringify({
@@ -226,13 +191,12 @@ async function markDone(id){
   loadTasks();
 }
 
-// LOGOUT
-function logout(){
+// ✅ LOGOUT
+function logout() {
   localStorage.removeItem("token");
   window.location.href = "index.html";
 }
 
-// AUTO LOAD
 loadTasks();
 
 </script>
