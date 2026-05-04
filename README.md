@@ -75,4 +75,13 @@ node server.js
 
 frontend/index.html
 
+**Dashboard Logic**
+Pending → Tasks not completed
+Completed → Tasks marked completed
+Overdue → Deadline passed & not completed
+
+👨‍💻 Author
+AMAN PATEL
+
+
 
