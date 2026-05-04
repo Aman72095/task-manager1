@@ -65,22 +65,26 @@ task-manager/
 ## ⚙️ Installation & Setup
 
 ### 1. Clone Repository
-```bash
 git clone https://github.com/YOUR_USERNAME/task-manager.git
 cd task-manager
 
+### 2. Backend Setup
 cd backend
 npm install
 node server.js
 
+
+### 3. Run Frontend
 frontend/index.html
+
+
 
 **Dashboard Logic**
 Pending → Tasks not completed
 Completed → Tasks marked completed
 Overdue → Deadline passed & not completed
 
-👨‍💻 Author
+## 👨‍💻 Author
 AMAN PATEL
 
 
