@@ -2,14 +2,14 @@
 
 A full-stack web application that allows users to create, assign, and manage tasks with authentication and a real-time dashboard.
 
----
+
 
 ## 🌐 Live Demo
 
 🔗 Backend API:  
 https://task-manager1-production.up.railway.app
 
----
+
 
 ## 📌 Features
 
@@ -23,7 +23,7 @@ https://task-manager1-production.up.railway.app
 - ⚡ Real-time Task Updates
 - 🌍 Deployed Backend (Railway)
 
----
+
 
 ## 🛠️ Tech Stack
 
@@ -41,7 +41,6 @@ https://task-manager1-production.up.railway.app
 - Railway
 - GitHub
 
----
 
 ## 📂 Project Structure
 task-manager/
@@ -60,7 +59,6 @@ task-manager/
 └── README.md
 
 
----
 
 ## ⚙️ Installation & Setup
 
@@ -79,10 +77,13 @@ frontend/index.html
 
 
 
+
 **Dashboard Logic**
 Pending → Tasks not completed
 Completed → Tasks marked completed
 Overdue → Deadline passed & not completed
+
+
 
 ## 👨‍💻 Author
 AMAN PATEL
